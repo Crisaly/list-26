@@ -284,6 +284,19 @@ app.delete('/api/admin/items/:barcode', (req, res) => {
   }
 });
 
+// Remove an order log entry
+app.delete('/api/admin/logs/:orderId', (req, res) => {
+  try {
+    const db = readDb();
+    const orderId = String(req.params.orderId || '').trim();
+    db.logs = (db.logs || []).filter((l) => String(l.orderId).trim() !== orderId);
+    writeDb(db);
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: String(err) });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`FreshTrack server running on port ${PORT}`);
 });
