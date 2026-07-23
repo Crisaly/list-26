@@ -267,50 +267,152 @@
 
     <!-- TAB SECTION C: ADMIN OPERATIONS SYSTEM HISTORY LOGS -->
     <section id="view-dashboard" class="hidden space-y-4">
-      <div class="grid grid-cols-2 gap-4">
-        <div class="bg-white rounded-2xl p-4 border border-gray-100 text-center shadow-sm">
-          <div class="flex items-center justify-center gap-1.5">
-            <span class="block text-xs font-bold text-gray-400 uppercase">Active Orders</span>
-            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+
+      <!-- ADMIN SUB-NAVIGATION -->
+      <div class="bg-white rounded-2xl p-1.5 border border-gray-100 shadow-sm flex gap-1">
+        <button onclick="switchAdminSubview('logs')" id="subtab-logs" class="flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition bg-blue-600 text-white">Order Logs</button>
+        <button onclick="switchAdminSubview('pickers')" id="subtab-pickers" class="flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition text-gray-500">Pickers</button>
+        <button onclick="switchAdminSubview('items')" id="subtab-items" class="flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition text-gray-500">Items</button>
+      </div>
+
+      <!-- SUBVIEW: ORDER LOGS -->
+      <div id="dash-subview-logs" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-white rounded-2xl p-4 border border-gray-100 text-center shadow-sm">
+            <div class="flex items-center justify-center gap-1.5">
+              <span class="block text-xs font-bold text-gray-400 uppercase">Active Orders</span>
+              <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
+            </div>
+            <span id="dash-active-count" class="text-3xl font-black text-blue-600 mt-1 block">0</span>
           </div>
-          <span id="dash-active-count" class="text-3xl font-black text-blue-600 mt-1 block">0</span>
+          <div class="bg-white rounded-2xl p-4 border border-gray-100 text-center shadow-sm">
+            <span class="block text-xs font-bold text-gray-400 uppercase">Completed</span>
+            <span id="dash-complete-count" class="text-3xl font-black text-emerald-600 mt-1 block">0</span>
+          </div>
         </div>
-        <div class="bg-white rounded-2xl p-4 border border-gray-100 text-center shadow-sm">
-          <span class="block text-xs font-bold text-gray-400 uppercase">Completed</span>
-          <span id="dash-complete-count" class="text-3xl font-black text-emerald-600 mt-1 block">0</span>
+
+        <!-- SEARCH FILTER AND DIRECTIONAL ORDER MECHANICS INTERFACE -->
+        <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
+          <div class="relative">
+            <input type="text" id="admin-search-input" oninput="handleAdminSearchFilter()" placeholder="Search Order Code Reference..." class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-9 pr-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-400 font-medium">Filter Layout Configuration:</span>
+            <button onclick="toggleAdminSortOrder()" id="admin-sort-toggle-btn" class="bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
+              <i class="fa-solid fa-arrow-down-wide-short"></i> <span id="admin-sort-label">Last on Top (Newest First)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold text-gray-800 text-sm">Operations Logs</h3>
+              <span class="text-[9px] bg-blue-50 border border-blue-200 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                <i class="fa-solid fa-arrows-rotate animate-spin text-[8px]"></i> Auto-Refreshing
+              </span>
+            </div>
+            <button onclick="refreshData(true)" id="admin-manual-refresh-btn" class="text-xs text-blue-600 font-semibold flex items-center space-x-1 hover:text-blue-800">
+              <i id="admin-refresh-icon" class="fa-solid fa-rotate"></i> <span>Refresh Now</span>
+            </button>
+          </div>
+          <div class="divide-y divide-gray-100" id="dash-logs-container">
+            <p class="text-sm text-gray-400 p-4 text-center italic">Loading telemetry logs...</p>
+          </div>
         </div>
       </div>
 
-      <!-- SEARCH FILTER AND DIRECTIONAL ORDER MECHANICS INTERFACE -->
-      <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
-        <div class="relative">
-          <input type="text" id="admin-search-input" oninput="handleAdminSearchFilter()" placeholder="Search Order Code Reference..." class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-9 pr-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400 text-xs"></i>
-        </div>
-        <div class="flex justify-between items-center text-xs">
-          <span class="text-gray-400 font-medium">Filter Layout Configuration:</span>
-          <button onclick="toggleAdminSortOrder()" id="admin-sort-toggle-btn" class="bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
-            <i class="fa-solid fa-arrow-down-wide-short"></i> <span id="admin-sort-label">Last on Top (Newest First)</span>
+      <!-- SUBVIEW: PICKERS MANAGEMENT -->
+      <div id="dash-subview-pickers" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Add / Update Picker</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Picker Name</label>
+              <input type="text" id="picker-form-name" placeholder="e.g. JOHN" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium uppercase">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">PIN / Password</label>
+              <input type="text" id="picker-form-password" placeholder="e.g. 1234" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Phone (optional)</label>
+              <input type="text" id="picker-form-phone" placeholder="+357..." class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email (optional)</label>
+              <input type="email" id="picker-form-email" placeholder="name@example.com" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium">
+            </div>
+          </div>
+          <button onclick="submitPickerForm()" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl shadow-md flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Save Picker</span>
           </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+            <h3 class="font-bold text-gray-800 text-sm">Existing Pickers</h3>
+            <span id="pickers-count-badge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+          </div>
+          <div class="divide-y divide-gray-100" id="pickers-list-container">
+            <p class="text-sm text-gray-400 p-4 text-center italic">Loading pickers...</p>
+          </div>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-          <div class="flex items-center gap-2">
-            <h3 class="font-bold text-gray-800 text-sm">Operations Logs</h3>
-            <span class="text-[9px] bg-blue-50 border border-blue-200 text-blue-600 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-              <i class="fa-solid fa-arrows-rotate animate-spin text-[8px]"></i> Auto-Refreshing
-            </span>
-          </div>
-          <button onclick="refreshData(true)" id="admin-manual-refresh-btn" class="text-xs text-blue-600 font-semibold flex items-center space-x-1 hover:text-blue-800">
-            <i id="admin-refresh-icon" class="fa-solid fa-rotate"></i> <span>Refresh Now</span>
+      <!-- SUBVIEW: ITEMS MANAGEMENT -->
+      <div id="dash-subview-items" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Bulk Import Items</h3>
+          <p class="text-xs text-gray-500">Paste rows copied straight from your spreadsheet (Barcode, Item Code, Description columns - one item per line). Existing barcodes get updated; new ones get added.</p>
+          <textarea id="items-import-textarea" rows="6" placeholder="5202178009006	866314	OLYMPOS COTTAGE CHEESE 4% 180 g&#10;5202178040177	829408	OLYMPOS KEFIR 1% 500 ml" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-xs font-mono"></textarea>
+          <button onclick="submitItemsImport()" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl shadow-md flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-file-import"></i>
+            <span>Import Pasted Rows</span>
           </button>
         </div>
-        <div class="divide-y divide-gray-100" id="dash-logs-container">
-          <p class="text-sm text-gray-400 p-4 text-center italic">Loading telemetry logs...</p>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Add Single Item</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Barcode</label>
+              <input type="text" id="item-form-barcode" placeholder="e.g. 5202178009006" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Item Code</label>
+              <input type="text" id="item-form-sku" placeholder="e.g. 866314" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Description</label>
+              <input type="text" id="item-form-description" placeholder="e.g. OLYMPOS KEFIR 500 ml" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 outline-none text-sm font-medium">
+            </div>
+          </div>
+          <button onclick="submitItemForm()" class="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl shadow-md flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add / Update Item</span>
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="p-4 bg-gray-50 border-b border-gray-100 space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-gray-800 text-sm">Item Catalog</h3>
+              <span id="items-count-badge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+            </div>
+            <div class="relative">
+              <input type="text" id="items-search-input" oninput="renderItemsList()" placeholder="Search barcode or description..." class="w-full bg-white border border-gray-200 rounded-xl py-2 pl-9 pr-4 outline-none text-sm">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+            </div>
+          </div>
+          <div class="divide-y divide-gray-100 max-h-96 overflow-y-auto" id="items-list-container">
+            <p class="text-sm text-gray-400 p-4 text-center italic">Loading items...</p>
+          </div>
         </div>
       </div>
+
     </section>
   </main>
 
@@ -1102,6 +1204,194 @@
 
     function closePrintModal() {
       document.getElementById('print-modal').classList.add('hidden');
+    }
+
+    // ---------- ADMIN: sub-navigation ----------
+    let ADMIN_SUBVIEW = 'logs';
+
+    function switchAdminSubview(target) {
+      ADMIN_SUBVIEW = target;
+      ['logs', 'pickers', 'items'].forEach((v) => {
+        const panel = document.getElementById(`dash-subview-${v}`);
+        const tab = document.getElementById(`subtab-${v}`);
+        if (panel) panel.classList.toggle('hidden', v !== target);
+        if (tab) {
+          tab.className = v === target
+            ? "flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition bg-blue-600 text-white"
+            : "flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition text-gray-500";
+        }
+      });
+
+      if (target === 'pickers') loadPickersList();
+      if (target === 'items') loadItemsList();
+    }
+
+    // ---------- ADMIN: pickers management ----------
+    let CACHED_PICKERS = [];
+
+    async function loadPickersList() {
+      const container = document.getElementById('pickers-list-container');
+      container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">Loading pickers...</p>`;
+      const res = await apiGet('/api/admin/pickers');
+      if (!res.success) {
+        container.innerHTML = `<p class="text-sm text-red-500 p-4 text-center italic">Failed to load pickers.</p>`;
+        return;
+      }
+      CACHED_PICKERS = res.pickers || [];
+      renderPickersList();
+    }
+
+    function renderPickersList() {
+      const container = document.getElementById('pickers-list-container');
+      document.getElementById('pickers-count-badge').innerText = CACHED_PICKERS.length;
+
+      if (CACHED_PICKERS.length === 0) {
+        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No pickers added yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = CACHED_PICKERS.map((p) => `
+        <div class="p-3 flex justify-between items-center text-sm">
+          <div>
+            <p class="font-bold text-gray-900 uppercase">${p.name}</p>
+            <p class="text-xs text-gray-500">PIN: ${p.password || 'N/A'}${p.phone ? ' • ' + p.phone : ''}${p.email ? ' • ' + p.email : ''}</p>
+          </div>
+          <button onclick="removePicker('${p.name}')" class="bg-red-50 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function submitPickerForm() {
+      const name = document.getElementById('picker-form-name').value.trim();
+      const password = document.getElementById('picker-form-password').value.trim();
+      const phone = document.getElementById('picker-form-phone').value.trim();
+      const email = document.getElementById('picker-form-email').value.trim();
+
+      if (!name || !password) {
+        alert('Picker name and PIN/password are required.');
+        return;
+      }
+
+      const res = await apiPost('/api/admin/pickers', { name, password, phone, email });
+      if (res.success) {
+        document.getElementById('picker-form-name').value = '';
+        document.getElementById('picker-form-password').value = '';
+        document.getElementById('picker-form-phone').value = '';
+        document.getElementById('picker-form-email').value = '';
+        loadPickersList();
+        refreshData(false);
+      } else {
+        alert('Error: ' + (res.error || 'could not save picker.'));
+      }
+    }
+
+    async function removePicker(name) {
+      if (!confirm(`Remove picker "${name}"? This cannot be undone.`)) return;
+      const res = await fetch('/api/admin/pickers/' + encodeURIComponent(name), { method: 'DELETE' }).then(r => r.json());
+      if (res.success) {
+        loadPickersList();
+        refreshData(false);
+      } else {
+        alert('Error: ' + (res.error || 'could not remove picker.'));
+      }
+    }
+
+    // ---------- ADMIN: items management ----------
+    let CACHED_ITEMS = [];
+
+    async function loadItemsList() {
+      const container = document.getElementById('items-list-container');
+      container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">Loading items...</p>`;
+      const res = await apiGet('/api/admin/items');
+      if (!res.success) {
+        container.innerHTML = `<p class="text-sm text-red-500 p-4 text-center italic">Failed to load items.</p>`;
+        return;
+      }
+      CACHED_ITEMS = res.items || [];
+      renderItemsList();
+    }
+
+    function renderItemsList() {
+      const container = document.getElementById('items-list-container');
+      document.getElementById('items-count-badge').innerText = CACHED_ITEMS.length;
+
+      const query = document.getElementById('items-search-input').value.trim().toLowerCase();
+      let list = CACHED_ITEMS;
+      if (query) {
+        list = CACHED_ITEMS.filter((i) =>
+          i.barcode.toLowerCase().includes(query) || i.description.toLowerCase().includes(query)
+        );
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No items found.</p>`;
+        return;
+      }
+
+      container.innerHTML = list.map((i) => `
+        <div class="p-3 flex justify-between items-center text-sm">
+          <div>
+            <p class="font-bold text-gray-900">${i.description}</p>
+            <p class="text-xs text-gray-500 font-mono">${i.barcode}${i.sku ? ' • Code: ' + i.sku : ''}</p>
+          </div>
+          <button onclick="removeItem('${i.barcode}')" class="bg-red-50 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-100 transition shrink-0 ml-2">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function submitItemForm() {
+      const barcode = document.getElementById('item-form-barcode').value.trim();
+      const sku = document.getElementById('item-form-sku').value.trim();
+      const description = document.getElementById('item-form-description').value.trim();
+
+      if (!barcode || !description) {
+        alert('Barcode and description are required.');
+        return;
+      }
+
+      const res = await apiPost('/api/admin/items', { barcode, sku, description });
+      if (res.success) {
+        document.getElementById('item-form-barcode').value = '';
+        document.getElementById('item-form-sku').value = '';
+        document.getElementById('item-form-description').value = '';
+        loadItemsList();
+        refreshData(false);
+      } else {
+        alert('Error: ' + (res.error || 'could not save item.'));
+      }
+    }
+
+    async function submitItemsImport() {
+      const text = document.getElementById('items-import-textarea').value;
+      if (!text.trim()) {
+        alert('Paste some rows first.');
+        return;
+      }
+
+      const res = await apiPost('/api/admin/items/import', { text });
+      if (res.success) {
+        document.getElementById('items-import-textarea').value = '';
+        alert(`Imported/updated ${res.imported} item(s).`);
+        loadItemsList();
+        refreshData(false);
+      } else {
+        alert('Error: ' + (res.error || 'import failed.'));
+      }
+    }
+
+    async function removeItem(barcode) {
+      if (!confirm(`Remove item with barcode "${barcode}"?`)) return;
+      const res = await fetch('/api/admin/items/' + encodeURIComponent(barcode), { method: 'DELETE' }).then(r => r.json());
+      if (res.success) {
+        loadItemsList();
+        refreshData(false);
+      } else {
+        alert('Error: ' + (res.error || 'could not remove item.'));
+      }
     }
   </script>
 </body>
