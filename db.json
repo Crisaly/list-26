@@ -1,0 +1,37 @@
+{
+  "items": [
+    { "barcode": "5202178009006", "sku": "866314", "description": "OLYMPOS COTTAGE CHEESE 4% 180 g" },
+    { "barcode": "5202178040177", "sku": "829408", "description": "OLYMPOS KEFIR 1% 500 ml" },
+    { "barcode": "5202178012020", "sku": "897840", "description": "OLYMPOS KEFIR STRAWBERRY 0.9% 330 ml" },
+    { "barcode": "5292459007357", "sku": "888941", "description": "ALPHAMEGA GOUDA CHEESE SLICES 200 g" },
+    { "barcode": "5292459007319", "sku": "888937", "description": "ALPHAMEGA EDAM CHEESE SLICES 200 g" },
+    { "barcode": "5292459007364", "sku": "888942", "description": "ALPHAMEGA TILSIT CHEESE SLICES 200 g" },
+    { "barcode": "5290021000775", "sku": "107205", "description": "SNACK STREAKY BACON 150 g" },
+    { "barcode": "5290021001451", "sku": "885059", "description": "SNACK ROASTED TURKEY SLICED 150 g" },
+    { "barcode": "5206546006626", "sku": "625052", "description": "OREINO KERKYRAS BUTTER UNSALT 200 g ART018" },
+    { "barcode": "5291716004689", "sku": "894267", "description": "ARDOUR UNSALTED BUTTER 200 g" },
+    { "barcode": "5291716004696", "sku": "894268", "description": "ARDOUR SALTED BUTTER 200 g" },
+    { "barcode": "5201704063093", "sku": "849064", "description": "KOLIOS LABNEH CREAM CHEESE 200g" },
+    { "barcode": "8715300238306", "sku": "781496", "description": "FRICO UNSALTED BUTTER 200 g" },
+    { "barcode": "4000339435326", "sku": "324766", "description": "PHILADELPHIA LIGHT GARL&HERBS 200 g" },
+    { "barcode": "4000339435425", "sku": "735540", "description": "PHILADELPHIA LIGHT 200 g" },
+    { "barcode": "4000339697908", "sku": "735539", "description": "PHILADELPHIA REGULAR 200 g" },
+    { "barcode": "5201125003609", "sku": "735542", "description": "PHILADELPHIA 300 g" },
+    { "barcode": "8719200251861", "sku": "876234", "description": "BECEL PRO ACTIV 450 g" },
+    { "barcode": "8719200251892", "sku": "876233", "description": "BECEL PRO ACTIV 225 g" },
+    { "barcode": "8719200261822", "sku": "876235", "description": "PRO ACTIV OLIVE OIL 225 g BECEL" },
+    { "barcode": "5208069003184", "sku": "879573", "description": "VITAM LIGHT MARGARINE 225 g" },
+    { "barcode": "5208069003313", "sku": "879572", "description": "VITAM CLASSIC MARGARINE 200 g" },
+    { "barcode": "8719200284401", "sku": "615705", "description": "I CANT BELIEVE ITS NOT BUTTER 500 g" },
+    { "barcode": "5208069003054", "sku": "879574", "description": "MARGARINE LIGHT 450 g FLORA" }
+  ],
+  "passwords": [
+    { "name": "MATRIX", "password": "changeme" },
+    { "name": "ADMIN", "password": "changeme" },
+    { "name": "SAMPLE PICKER", "password": "1234" }
+  ],
+  "recipients": [
+    { "email": "", "name": "SAMPLE PICKER", "phone": "" }
+  ],
+  "logs": []
+}
