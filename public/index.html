@@ -102,8 +102,6 @@
 <body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col relative">
 
   <script>
-    // Mode is now passed as a URL query param instead of server-side templating,
-    // e.g. https://yourapp.onrender.com/?mode=picker
     const USER_MODE = new URLSearchParams(window.location.search).get('mode') || 'admin';
   </script>
 
@@ -191,7 +189,6 @@
           <div class="flex gap-2">
             <select id="matrix-recipient" onchange="updateNativeSmsLink()" class="flex-1 bg-gray-50 border border-gray-200 rounded-xl py-3 px-3 outline-none text-base font-medium uppercase"></select>
 
-            <!-- FIXED FOR SAFARI IOS: FORCED OUT-OF-IFRAME AND '&' SEPARATOR OVERRIDE -->
             <a id="sms-trigger-link" href="sms:" target="_blank" onclick="window.open(this.href, '_blank'); return false;" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 rounded-xl flex items-center justify-center transition shadow-sm" title="Send SMS Notification">
               <i class="fa-solid fa-comment-sms text-lg"></i>
             </a>
@@ -268,14 +265,12 @@
     <!-- TAB SECTION C: ADMIN OPERATIONS SYSTEM HISTORY LOGS -->
     <section id="view-dashboard" class="hidden space-y-4">
 
-      <!-- ADMIN SUB-NAVIGATION -->
       <div class="bg-white rounded-2xl p-1.5 border border-gray-100 shadow-sm flex gap-1">
         <button onclick="switchAdminSubview('logs')" id="subtab-logs" class="flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition bg-blue-600 text-white">Order Logs</button>
         <button onclick="switchAdminSubview('pickers')" id="subtab-pickers" class="flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition text-gray-500">Pickers</button>
         <button onclick="switchAdminSubview('items')" id="subtab-items" class="flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition text-gray-500">Items</button>
       </div>
 
-      <!-- SUBVIEW: ORDER LOGS -->
       <div id="dash-subview-logs" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div class="bg-white rounded-2xl p-4 border border-gray-100 text-center shadow-sm">
@@ -291,7 +286,6 @@
           </div>
         </div>
 
-        <!-- SEARCH FILTER AND DIRECTIONAL ORDER MECHANICS INTERFACE -->
         <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
           <div class="relative">
             <input type="text" id="admin-search-input" oninput="handleAdminSearchFilter()" placeholder="Search Order Code Reference..." class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-9 pr-4 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium">
@@ -323,7 +317,6 @@
         </div>
       </div>
 
-      <!-- SUBVIEW: PICKERS MANAGEMENT -->
       <div id="dash-subview-pickers" class="hidden space-y-4">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
           <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Add / Update Picker</h3>
@@ -362,7 +355,6 @@
         </div>
       </div>
 
-      <!-- SUBVIEW: ITEMS MANAGEMENT -->
       <div id="dash-subview-items" class="hidden space-y-4">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
           <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Bulk Import Items</h3>
@@ -452,7 +444,6 @@
 
     let ADMIN_SORT_DIRECTION = 'top';
 
-    // ---------- tiny fetch helper replacing google.script.run ----------
     async function apiPost(path, body) {
       const res = await fetch(path, {
         method: 'POST',
@@ -466,7 +457,92 @@
       return res.json();
     }
 
-    // COMPREHENSIVE SAFARI NATIVE DYNAMIC HYPERLINK RECALCULATION
+    // PERSISTENCE STORAGE HELPERS
+    function saveStagedQueueToStorage() {
+      localStorage.setItem('freshtrack_staged_queue', JSON.stringify(STAGED_QUEUE));
+    }
+
+    function loadStoredData() {
+      const savedQueue = localStorage.getItem('freshtrack_staged_queue');
+      if (savedQueue) {
+        try {
+          STAGED_QUEUE = JSON.parse(savedQueue);
+          renderStagingQueue();
+        } catch (e) {
+          console.error("Failed to load saved queue", e);
+        }
+      }
+    }
+
+    // UPDATED QUEUE RENDERING WITH DELETE BUTTON
+    function renderStagingQueue() {
+      const container = document.getElementById('matrix-queue-list');
+      const countBadge = document.getElementById('staging-count');
+      
+      if (countBadge) countBadge.innerText = `${STAGED_QUEUE.length} items`;
+
+      if (STAGED_QUEUE.length === 0) {
+        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No items added to dispatch yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = STAGED_QUEUE.map((item, index) => `
+        <div class="p-3 flex justify-between items-center hover:bg-gray-50 transition">
+          <div>
+            <h4 class="text-xs font-bold text-gray-800 uppercase">${item.description}</h4>
+            <p class="text-[10px] text-gray-400 font-mono">Barcode: ${item.barcode} | Qty: ${item.qty} ${item.unit}</p>
+          </div>
+          <button onclick="removeStagedItem(${index})" class="text-red-500 hover:text-red-700 p-2 text-sm" title="Remove item">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function removeStagedItem(index) {
+      STAGED_QUEUE.splice(index, 1);
+      saveStagedQueueToStorage();
+      renderStagingQueue();
+    }
+
+    // INTEGRATED QUEUE ADDITION WITH PERSISTENCE
+    function addItemToStaging() {
+      const barcodeInput = document.getElementById('matrix-scan');
+      const matchBox = document.getElementById('matrix-match');
+      const unitSelect = document.getElementById('matrix-unit');
+      const qtyInput = document.getElementById('matrix-qty');
+
+      if (!barcodeInput || !matchBox) return;
+      const scannedCode = barcodeInput.value.trim();
+      const matchedItem = APP_ITEMS.find(i => i.barcode === scannedCode || i.sku === scannedCode);
+
+      if (!matchedItem) {
+        alert("Please scan or enter a valid item first.");
+        return;
+      }
+
+      const qty = parseInt(qtyInput.value) || 1;
+      const unit = unitSelect.value;
+
+      STAGED_QUEUE.push({
+        barcode: matchedItem.barcode,
+        sku: matchedItem.sku,
+        description: matchedItem.description,
+        qty: qty,
+        unit: unit
+      });
+
+      saveStagedQueueToStorage();
+      renderStagingQueue();
+
+      // Reset fields
+      barcodeInput.value = "";
+      matchBox.innerText = "Waiting for barcode read...";
+      matchBox.className = "w-full bg-gray-100 border border-gray-200 text-gray-500 rounded-xl py-3 px-4 min-h-[48px] text-sm italic flex items-center";
+      qtyInput.value = "1";
+      barcodeInput.focus();
+    }
+
     function updateNativeSmsLink() {
       const linkEl = document.getElementById('sms-trigger-link');
       const recipientSelect = document.getElementById('matrix-recipient');
@@ -488,7 +564,6 @@
       const terminalUrl = window.location.origin + window.location.pathname + "?mode=picker";
       const messageText = `📢 Alert New Order: Hi ${selectedPicker}, order ${exactOrderId} is ready to pack!\n\nTap here to start picking:\n${terminalUrl}`;
 
-      // UNIVERSAL HYBRID PARSING: Uses &body= if phone exists, otherwise uses standard syntax safely
       let smsUrl = "";
       if (phoneNumber) {
         smsUrl = `sms:${phoneNumber}&body=${encodeURIComponent(messageText)}`;
@@ -498,7 +573,6 @@
 
       linkEl.setAttribute('href', smsUrl);
 
-      // iOS Safari iframe override handler
       linkEl.onclick = function(e) {
         e.preventDefault();
         var w = window.open(smsUrl, '_blank');
@@ -599,819 +673,9 @@
       if (toast) toast.classList.add('hidden');
     }
 
-    function switchView(target) {
-      if (USER_MODE === 'picker' && target !== 'terminal') return;
-
-      if (target === 'matrix' && !IS_MATRIX_AUTHORIZED) {
-        let pass = prompt("Enter verification passcode to open the Matrix control window:");
-        if (!pass) return;
-
-        apiPost('/api/verify-password', { name: 'Matrix', password: pass }).then((res) => {
-          if (res.verified) {
-            IS_MATRIX_AUTHORIZED = true;
-            executeViewChange(target);
-          } else {
-            alert("❌ Invalid password entry.");
-          }
-        });
-        return;
-      }
-
-      if (target === 'dashboard' && !IS_ADMIN_AUTHORIZED) {
-        let pass = prompt("Enter verification passcode to open the Admin log window:");
-        if (!pass) return;
-
-        apiPost('/api/verify-password', { name: 'Admin', password: pass }).then((res) => {
-          if (res.verified) {
-            IS_ADMIN_AUTHORIZED = true;
-            executeViewChange(target);
-          } else {
-            alert("❌ Invalid password entry.");
-          }
-        });
-        return;
-      }
-
-      executeViewChange(target);
-    }
-
-    function executeViewChange(target) {
-      ['matrix', 'terminal', 'dashboard'].forEach(v => {
-        const viewEl = document.getElementById(`view-${v}`);
-        const btnEl = document.getElementById(`btn-${v}`);
-        if(viewEl) viewEl.style.setProperty('display', 'none', 'important');
-        if(btnEl) btnEl.className = "px-3 py-1.5 rounded-md font-medium transition text-white";
-      });
-
-      const activeView = document.getElementById(`view-${target}`);
-      if(activeView) activeView.style.setProperty('display', 'block', 'important');
-
-      const activeBtn = document.getElementById(`btn-${target}`);
-      if(activeBtn) activeBtn.className = "px-3 py-1.5 rounded-md font-medium transition bg-white text-blue-700 shadow-sm";
-    }
-
     window.addEventListener('DOMContentLoaded', () => {
-      if (USER_MODE === 'picker') {
-        const adminHeader = document.getElementById('admin-header');
-        if(adminHeader) adminHeader.remove();
-        executeViewChange('terminal');
-      } else {
-        executeViewChange('terminal');
-      }
-      refreshData(false);
-
-      if (POLLING_INTERVAL) clearInterval(POLLING_INTERVAL);
-      POLLING_INTERVAL = setInterval(() => {
-        if (AUTHENTICATED_OPERATOR) {
-          refreshTerminalOnly(false);
-        } else {
-          refreshData(false);
-        }
-      }, 10000);
+      loadStoredData();
     });
-
-    function refreshData(isManualClick = false) {
-      const icon = document.getElementById('admin-refresh-icon');
-      const btn = document.getElementById('admin-manual-refresh-btn');
-
-      if (isManualClick && icon && btn) {
-        icon.classList.add('animate-spin');
-        btn.disabled = true;
-      }
-
-      apiGet('/api/initial-data').then((res) => {
-        if (isManualClick && icon && btn) {
-          icon.classList.remove('animate-spin');
-          btn.disabled = false;
-        }
-
-        if(res.success) {
-          APP_ITEMS = res.items || [];
-          APP_RECIPIENTS = res.recipients || [];
-          ALL_LOGGED_ORDERS = res.logs || [];
-          populateRecipients();
-          populateTerminalPickerDropdown();
-          buildLogsContainer(ALL_LOGGED_ORDERS);
-          updateLivePendingCounter();
-
-          if (AUTHENTICATED_OPERATOR) {
-            checkForAssignedPickerJob(false);
-          }
-        }
-      });
-    }
-
-    function refreshTerminalOnly(isManualClick = false) {
-      if (!AUTHENTICATED_OPERATOR) return;
-
-      const icon = document.getElementById('refresh-icon');
-      const btn = document.getElementById('term-refresh-btn');
-
-      if (isManualClick) {
-        if (icon) icon.classList.add('animate-spin');
-        if (btn) btn.disabled = true;
-      }
-
-      apiGet('/api/initial-data').then((res) => {
-        if (isManualClick) {
-          if (icon) icon.classList.remove('animate-spin');
-          if (btn) btn.disabled = false;
-        }
-
-        if(res.success) {
-          ALL_LOGGED_ORDERS = res.logs || [];
-          buildLogsContainer(ALL_LOGGED_ORDERS);
-          updateLivePendingCounter();
-          checkForAssignedPickerJob(true);
-        }
-      });
-    }
-
-    function updateLivePendingCounter() {
-      const counterEl = document.getElementById('term-pending-count');
-      if (!counterEl) return;
-      if (!AUTHENTICATED_OPERATOR) {
-        counterEl.innerText = "0";
-        return;
-      }
-      const totalPending = ALL_LOGGED_ORDERS.filter(o => o.status === 'Pending' && o.picker === AUTHENTICATED_OPERATOR).length;
-      counterEl.innerText = totalPending;
-    }
-
-    function populateRecipients() {
-      const select = document.getElementById('matrix-recipient');
-      if (select) {
-        const previousValue = select.value;
-        select.innerHTML = APP_RECIPIENTS.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
-        if (previousValue && APP_RECIPIENTS.some(r => r.name === previousValue)) {
-          select.value = previousValue;
-        }
-        updateNativeSmsLink();
-      }
-    }
-
-    function populateTerminalPickerDropdown() {
-      const select = document.getElementById('term-picker-select');
-      if (!select) return;
-
-      let optionsHtml = `<option value="">-- VERIFY IDENTITY CHANNELS --</option>`;
-      optionsHtml += APP_RECIPIENTS.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
-      select.innerHTML = optionsHtml;
-
-      if (AUTHENTICATED_OPERATOR) {
-        select.value = AUTHENTICATED_OPERATOR;
-      }
-    }
-
-    function handleOperatorChange(selectedPicker) {
-      if (!selectedPicker) {
-        clearAuthSession();
-        return;
-      }
-
-      const pass = prompt(`Enter security pin code for [ ${selectedPicker} ] profile entry:`);
-      if (!pass) {
-        document.getElementById('term-picker-select').value = AUTHENTICATED_OPERATOR || "";
-        return;
-      }
-
-      apiPost('/api/verify-password', { name: selectedPicker, password: pass }).then((res) => {
-        if (res.verified) {
-          AUTHENTICATED_OPERATOR = selectedPicker;
-          document.getElementById('terminal-secure-placeholder').classList.add('hidden');
-          document.getElementById('terminal-secure-content').classList.remove('hidden');
-
-          updateLivePendingCounter();
-          checkForAssignedPickerJob(false);
-        } else {
-          alert("❌ Verification failed. Incorrect profile pass code entry.");
-          clearAuthSession();
-        }
-      });
-    }
-
-    function clearAuthSession() {
-      AUTHENTICATED_OPERATOR = null;
-      ACTIVE_TERMINAL_JOB = null;
-      if(TIMER_INTERVAL) {
-        clearInterval(TIMER_INTERVAL);
-        TIMER_INTERVAL = null;
-      }
-      TIMER_SECONDS = 0;
-      document.getElementById('term-picker-select').value = "";
-      document.getElementById('terminal-secure-content').classList.add('hidden');
-      document.getElementById('terminal-secure-placeholder').classList.remove('hidden');
-      updateLivePendingCounter();
-    }
-
-    function checkForAssignedPickerJob(shouldAlert = false) {
-      if (!AUTHENTICATED_OPERATOR) return;
-
-      const activeJob = ALL_LOGGED_ORDERS.find(o => o.status === 'Pending' && o.picker === AUTHENTICATED_OPERATOR);
-
-      if (activeJob) {
-        try {
-          const incomingItems = JSON.parse(activeJob.rawItemsJson);
-
-          if (!ACTIVE_TERMINAL_JOB || ACTIVE_TERMINAL_JOB.orderId !== activeJob.orderId) {
-            ACTIVE_TERMINAL_JOB = {
-              orderId: activeJob.orderId,
-              operator: activeJob.picker,
-              items: incomingItems
-            };
-            if (shouldAlert) {
-              playSoundEffect('new_order');
-              showNotificationToast(`New order assigned: ${activeJob.orderId}`);
-            }
-            syncTerminal();
-          } else {
-            let stateChanged = false;
-            incomingItems.forEach((incItem, idx) => {
-              if (ACTIVE_TERMINAL_JOB.items[idx]) {
-                const currentStatus = ACTIVE_TERMINAL_JOB.items[idx].pickerStatus;
-                if (currentStatus === 'Pending' && incItem.pickerStatus !== 'Pending') {
-                  ACTIVE_TERMINAL_JOB.items[idx].pickerStatus = incItem.pickerStatus;
-                  stateChanged = true;
-                }
-              }
-            });
-            if (stateChanged) syncTerminal();
-          }
-        } catch(e) { console.error(e); }
-      } else {
-        ACTIVE_TERMINAL_JOB = null;
-        document.getElementById('term-order-id').innerText = "NO ACTIVE RUN";
-        document.getElementById('term-status').innerText = "Idle";
-        document.getElementById('term-progress').innerText = "0 / 0";
-
-        document.getElementById('term-picking-cards').innerHTML = `
-          <div class="bg-gray-950 border border-dashed border-gray-800 rounded-2xl p-8 text-center text-sm text-gray-400 space-y-2">
-             <i class="fa-solid fa-circle-check text-2xl text-emerald-500 block"></i>
-             <p class="font-bold text-gray-200">No new orders found at this moment.</p>
-             <p class="text-xs text-gray-500 max-w-xs mx-auto">Waiting for new matrix routing sheets to be assigned to "${AUTHENTICATED_OPERATOR}".</p>
-          </div>`;
-      }
-    }
-
-    function stepQty(amount) {
-      const input = document.getElementById('matrix-qty');
-      input.value = Math.max(1, (parseInt(input.value) || 1) + amount);
-    }
-
-    let currentItemMatch = null;
-    function handleBarcodeLookup(val) {
-      const fb = document.getElementById('matrix-match');
-      if(!fb) return;
-      currentItemMatch = APP_ITEMS.find(i => i.barcode === val.trim());
-
-      if(currentItemMatch) {
-        fb.innerText = currentItemMatch.description;
-        fb.className = "w-full bg-blue-50 border border-blue-200 text-blue-800 rounded-xl py-3 px-4 min-h-[48px] text-sm font-semibold flex items-center";
-      } else {
-        fb.innerText = val.trim() ? "No database match found" : "Waiting for barcode read...";
-        fb.className = "w-full bg-gray-100 border border-gray-200 text-gray-500 rounded-xl py-3 px-4 min-h-[48px] text-sm italic flex items-center";
-      }
-    }
-
-    function addItemToStaging() {
-      const scanInput = document.getElementById('matrix-scan');
-      if (!scanInput.value.trim()) return;
-
-      let desc = currentItemMatch ? currentItemMatch.description : "Manual Item (" + scanInput.value + ")";
-      let sku = currentItemMatch ? currentItemMatch.sku : "N/A";
-
-      STAGED_QUEUE.push({
-        barcode: scanInput.value.trim(),
-        sku: sku,
-        description: desc,
-        qty: document.getElementById('matrix-qty').value,
-        unit: document.getElementById('matrix-unit').value,
-        pickerStatus: 'Pending'
-      });
-
-      scanInput.value = "";
-      handleBarcodeLookup("");
-      renderQueue();
-      updateNativeSmsLink();
-    }
-
-    function renderQueue() {
-      document.getElementById('staging-count').innerText = `${STAGED_QUEUE.length} items`;
-      const container = document.getElementById('matrix-queue-list');
-      if(STAGED_QUEUE.length === 0) {
-        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No items added to dispatch yet.</p>`;
-        return;
-      }
-      container.innerHTML = STAGED_QUEUE.map((item) => `
-        <div class="flex items-center justify-between p-3 text-sm">
-          <div>
-            <p class="font-bold text-gray-900">${item.description}</p>
-            <p class="text-xs text-gray-500">Barcode: ${item.barcode}</p>
-          </div>
-          <span class="bg-gray-100 px-2 py-1 rounded text-xs font-bold">${item.qty} ${item.unit}</span>
-        </div>
-      `).join('');
-    }
-
-    function handleDispatch() {
-      if(STAGED_QUEUE.length === 0) return;
-      const recipient = document.getElementById('matrix-recipient').value;
-
-      apiPost('/api/dispatch-order', { recipientName: recipient, itemsList: STAGED_QUEUE }).then((res) => {
-        if (res.success) {
-          STAGED_QUEUE = [];
-          renderQueue();
-          refreshData(false);
-          alert("Success! Order routed straight to picker terminal processing streams.");
-        }
-      });
-    }
-
-    function syncTerminal() {
-      if(!ACTIVE_TERMINAL_JOB) return;
-      document.getElementById('term-order-id').innerText = ACTIVE_TERMINAL_JOB.orderId;
-
-      let completedCount = ACTIVE_TERMINAL_JOB.items.filter(i => i.pickerStatus && i.pickerStatus !== 'Pending').length;
-      document.getElementById('term-progress').innerText = `${completedCount} / ${ACTIVE_TERMINAL_JOB.items.length}`;
-
-      const isPicking = (TIMER_INTERVAL !== null);
-
-      document.getElementById('term-picking-cards').innerHTML = ACTIVE_TERMINAL_JOB.items.map((item, idx) => {
-        let cardStyle = "border-gray-800 bg-gray-950 text-gray-100";
-        let transformStyle = "transform: translateX(0px);";
-        let statusBadge = "";
-
-        if (item.pickerStatus === 'Picked') {
-          cardStyle = "border-emerald-500 bg-emerald-600 text-white font-semibold";
-          statusBadge = `<div class="text-[10px] bg-white text-emerald-700 font-black px-2 py-0.5 rounded uppercase tracking-wider shadow-sm"><i class="fa-solid fa-box"></i> Picked</div>`;
-        } else if (item.pickerStatus === 'Out Of Stock') {
-          cardStyle = "border-red-600 bg-red-600 text-white font-semibold";
-          statusBadge = `<div class="text-[10px] bg-white text-red-700 font-black px-2 py-0.5 rounded uppercase tracking-wider shadow-sm"><i class="fa-solid fa-circle-xmark"></i> Out Of Stock</div>`;
-        }
-
-        return `
-          <div class="swipe-container relative">
-            <div class="swipe-bg-left"></div>
-            <div class="swipe-bg-right"></div>
-
-            <div data-index="${idx}" style="${transformStyle}" class="swipe-card border ${cardStyle} rounded-2xl p-4 space-y-3 text-left shadow-lg select-none">
-              <div class="flex justify-between items-start gap-2">
-                <h4 class="font-bold text-xs max-w-[70%] leading-tight">${item.description}</h4>
-                <div class="flex flex-col items-end gap-1.5 whitespace-nowrap">
-                  <span class="bg-amber-500 text-gray-950 font-black text-xs px-2.5 py-0.5 rounded">${item.qty} ${item.unit}</span>
-                  ${statusBadge}
-                </div>
-              </div>
-              <div class="bg-gray-900/40 rounded py-2 text-center text-xs font-mono text-cyan-300 border border-black/10 tracking-wider pointer-events-none">${item.barcode}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      if (isPicking) {
-        attachSwipeListeners();
-      }
-    }
-
-    function attachSwipeListeners() {
-      const cards = document.querySelectorAll('.swipe-card');
-      cards.forEach(card => {
-        let startX = 0;
-        let currentX = 0;
-        let isMoving = false;
-        let index = parseInt(card.getAttribute('data-index'));
-
-        card.addEventListener('touchstart', (e) => {
-          startX = e.touches[0].clientX;
-          card.style.transition = 'none';
-          isMoving = true;
-        }, { passive: true });
-
-        card.addEventListener('touchmove', (e) => {
-          if (!isMoving) return;
-          currentX = e.touches[0].clientX;
-          let diffX = currentX - startX;
-
-          if (Math.abs(diffX) < 160) {
-            card.style.transform = `translateX(${diffX}px)`;
-          }
-        }, { passive: true });
-
-        card.addEventListener('touchend', () => {
-          isMoving = false;
-          card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
-          let diffX = currentX - startX;
-
-          if (diffX > 80) {
-            setItemStatus(index, 'Picked');
-          }
-          else if (diffX < -80) {
-            setItemStatus(index, 'Out Of Stock');
-          }
-          else {
-            card.style.transform = 'translateX(0px)';
-          }
-          startX = 0; currentX = 0;
-        }, { passive: true });
-      });
-    }
-
-    function setItemStatus(index, status) {
-      if (!ACTIVE_TERMINAL_JOB) return;
-
-      if (ACTIVE_TERMINAL_JOB.items[index].pickerStatus === status) {
-        ACTIVE_TERMINAL_JOB.items[index].pickerStatus = 'Pending';
-      } else {
-        ACTIVE_TERMINAL_JOB.items[index].pickerStatus = status;
-      }
-
-      playSoundEffect('swipe');
-      syncTerminal();
-    }
-
-    function toggleTerminalSession() {
-      const btn = document.getElementById('term-action-btn');
-      if (!ACTIVE_TERMINAL_JOB) return alert("No operations assigned to current identity.");
-
-      if(TIMER_INTERVAL === null) {
-        playSoundEffect('start');
-        document.getElementById('term-status').innerText = "Picking";
-        btn.innerText = "🏁 FINISH & LOG RUN";
-        btn.className = "flex-1 bg-blue-600 text-white font-black py-3 rounded-xl uppercase tracking-wider shadow-md text-xs";
-
-        TIMER_INTERVAL = setInterval(() => {
-          TIMER_SECONDS++;
-          document.getElementById('term-timer').innerText = `${(TIMER_SECONDS/60).toFixed(1)}m`;
-        }, 1000);
-        syncTerminal();
-      } else {
-        const unfinished = ACTIVE_TERMINAL_JOB.items.some(i => !i.pickerStatus || i.pickerStatus === 'Pending');
-        if (unfinished) {
-          alert("❌ Action Blocked: You cannot finish this order run until ALL items have been swiped as either Picked or Out Of Stock.");
-          return;
-        }
-
-        clearInterval(TIMER_INTERVAL);
-        TIMER_INTERVAL = null;
-
-        const finalDuration = (TIMER_SECONDS / 60).toFixed(2);
-
-        playSoundEffect('finish');
-        btn.innerText = "Syncing...";
-        btn.disabled = true;
-
-        const workingOrderId = ACTIVE_TERMINAL_JOB.orderId;
-        const workingItemsString = JSON.stringify(ACTIVE_TERMINAL_JOB.items);
-
-        ACTIVE_TERMINAL_JOB = null;
-        TIMER_SECONDS = 0;
-        document.getElementById('term-status').innerText = "Idle";
-        document.getElementById('term-timer').innerText = "0.0m";
-        btn.innerText = "🎬 START ORDER";
-        btn.className = "flex-1 bg-emerald-500 text-gray-950 font-black py-3 rounded-xl uppercase tracking-wider text-xs shadow-md";
-        btn.disabled = false;
-
-        document.getElementById('term-order-id').innerText = "NO ACTIVE RUN";
-        document.getElementById('term-progress').innerText = "0 / 0";
-        document.getElementById('term-picking-cards').innerHTML = `
-          <div class="bg-gray-950 border border-dashed border-gray-800 rounded-2xl p-8 text-center text-sm text-gray-400 space-y-2 animate-pulse">
-             <i class="fa-solid fa-cloud-arrow-up text-2xl text-cyan-400 block"></i>
-             <p class="font-bold text-gray-200">Syncing with cloud networks...</p>
-          </div>`;
-
-        apiPost('/api/log-completed-run', { orderId: workingOrderId, duration: finalDuration, updatedItemsJson: workingItemsString }).then((res) => {
-          if (res.success) {
-            refreshData(false);
-          } else {
-            alert("Error processing save sequence: " + res.error);
-          }
-        });
-      }
-    }
-
-    function buildLogsContainer(logs) {
-      let activeCount = 0;
-      let completeCount = 0;
-      const container = document.getElementById('dash-logs-container');
-      if (!container) return;
-
-      logs.forEach(row => {
-        if (row.status === 'Completed') completeCount++;
-        else if (row.status === 'Pending') activeCount++;
-      });
-      document.getElementById('dash-active-count').innerText = activeCount;
-      document.getElementById('dash-complete-count').innerText = completeCount;
-
-      const searchInput = document.getElementById('admin-search-input');
-      const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
-
-      let filteredLogs = logs;
-      if (query) {
-        filteredLogs = logs.filter(row => row.orderId && row.orderId.toLowerCase().includes(query));
-      }
-
-      let displayLogs = [...filteredLogs];
-      if (ADMIN_SORT_DIRECTION === 'top') {
-        displayLogs.sort((a, b) => b.orderId.localeCompare(a.orderId));
-      } else {
-        displayLogs.sort((a, b) => a.orderId.localeCompare(b.orderId));
-      }
-
-      if(displayLogs.length === 0) {
-        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No matching operational records found.</p>`;
-        return;
-      }
-
-      container.innerHTML = displayLogs.map(row => {
-        let badgeClass = "bg-gray-100 text-gray-600";
-        if (row.status === 'Completed') {
-          badgeClass = "bg-emerald-100 text-emerald-800 font-bold";
-        } else if (row.status === 'Pending') {
-          badgeClass = "bg-amber-100 text-amber-800 font-bold";
-        }
-
-        return `
-          <div class="p-3 flex justify-between items-center text-xs hover:bg-gray-50 transition">
-            <div class="space-y-0.5">
-              <div class="flex items-center space-x-2">
-                <span class="font-mono font-bold text-gray-900 text-sm">${row.orderId}</span>
-                <span class="px-2 py-0.5 rounded text-[10px] ${badgeClass}">${row.status}</span>
-              </div>
-              <p class="text-gray-500 font-medium">Picker: <span class="uppercase text-gray-800">${row.picker}</span> • Time: ${row.timestamp || 'N/A'}</p>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <button onclick="openPrintVoucher('${row.orderId}')" class="bg-gray-100 border border-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 hover:bg-gray-200 transition">
-                <i class="fa-solid fa-print"></i> <span>View</span>
-              </button>
-              <button onclick="removeLogEntry('${row.orderId}')" class="bg-red-50 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      updateNativeSmsLink();
-    }
-
-    function openPrintVoucher(orderId) {
-      const order = ALL_LOGGED_ORDERS.find(o => o.orderId === orderId);
-      if (!order) return alert("System could not match reference mappings.");
-
-      let itemsHtml = `<tr><td colspan="3" class="py-2 text-center text-gray-400 italic">No products matched on record.</td></tr>`;
-      if (order.rawItemsJson) {
-        try {
-          const parsed = JSON.parse(order.rawItemsJson);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            itemsHtml = parsed.map((item, index) => `
-              <tr class="border-b border-gray-200">
-                <td class="py-2 text-left">
-                  <span class="font-bold text-gray-900 block">${item.description}</span>
-                  <span class="text-[10px] text-gray-500 font-mono">${item.barcode}</span>
-                </td>
-                <td class="py-2 text-center font-bold text-gray-800">${item.qty} ${item.unit || 'box'}</td>
-                <td class="py-2 text-right font-mono font-bold text-[10px] uppercase text-blue-600">${item.pickerStatus || 'Pending'}</td>
-              </tr>
-            `).join('');
-          }
-        } catch(e) { console.error(e); }
-      }
-
-      const cleanHtml = `
-        <div class="pb-3 mb-4 flex justify-between items-end border-b-2 border-blue-600">
-          <div>
-            <h1 class="text-xl font-black text-blue-600 tracking-tight">FreshTrack Logistics</h1>
-            <p class="text-[10px] text-gray-400 font-medium">Fulfillment Verification Slip</p>
-          </div>
-          <span class="text-[10px] font-mono border border-gray-200 px-2 py-0.5 rounded bg-gray-50 text-gray-600 font-bold tracking-wider">RUN MANIFEST</span>
-        </div>
-        <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 grid grid-cols-2 gap-2 mb-4 text-[11px] leading-relaxed">
-          <div>
-            <span class="text-[10px] uppercase font-bold text-gray-400 block">Order Code Reference</span>
-            <span class="text-xs font-mono font-black text-blue-700">${order.orderId}</span>
-          </div>
-          <div class="text-right">
-            <span class="text-[10px] uppercase font-bold text-gray-400 block">Assigned Logistics Picker</span>
-            <span class="text-xs font-bold text-gray-800 uppercase">${order.picker}</span>
-          </div>
-        </div>
-        <table class="w-full text-left text-[11px] border-collapse">
-          <thead>
-            <tr class="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-200">
-              <th class="py-2 pl-1">Description / Identifier</th>
-              <th class="py-2 text-center w-16">Qty</th>
-              <th class="py-2 text-right pr-1 w-24">Fulfillment</th>
-            </tr>
-          </thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-      `;
-
-      document.getElementById('print-area').innerHTML = cleanHtml;
-      document.getElementById('print-modal').classList.remove('hidden');
-    }
-
-    function closePrintModal() {
-      document.getElementById('print-modal').classList.add('hidden');
-    }
-
-    async function removeLogEntry(orderId) {
-      if (!confirm(`Remove order "${orderId}" from the logs? This cannot be undone.`)) return;
-      const res = await fetch('/api/admin/logs/' + encodeURIComponent(orderId), { method: 'DELETE' }).then(r => r.json());
-      if (res.success) {
-        refreshData(false);
-      } else {
-        alert('Error: ' + (res.error || 'could not remove log entry.'));
-      }
-    }
-
-    // ---------- ADMIN: sub-navigation ----------
-    let ADMIN_SUBVIEW = 'logs';
-
-    function switchAdminSubview(target) {
-      ADMIN_SUBVIEW = target;
-      ['logs', 'pickers', 'items'].forEach((v) => {
-        const panel = document.getElementById(`dash-subview-${v}`);
-        const tab = document.getElementById(`subtab-${v}`);
-        if (panel) panel.classList.toggle('hidden', v !== target);
-        if (tab) {
-          tab.className = v === target
-            ? "flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition bg-blue-600 text-white"
-            : "flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition text-gray-500";
-        }
-      });
-
-      if (target === 'pickers') loadPickersList();
-      if (target === 'items') loadItemsList();
-    }
-
-    // ---------- ADMIN: pickers management ----------
-    let CACHED_PICKERS = [];
-
-    async function loadPickersList() {
-      const container = document.getElementById('pickers-list-container');
-      container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">Loading pickers...</p>`;
-      const res = await apiGet('/api/admin/pickers');
-      if (!res.success) {
-        container.innerHTML = `<p class="text-sm text-red-500 p-4 text-center italic">Failed to load pickers.</p>`;
-        return;
-      }
-      CACHED_PICKERS = res.pickers || [];
-      renderPickersList();
-    }
-
-    function renderPickersList() {
-      const container = document.getElementById('pickers-list-container');
-      document.getElementById('pickers-count-badge').innerText = CACHED_PICKERS.length;
-
-      if (CACHED_PICKERS.length === 0) {
-        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No pickers added yet.</p>`;
-        return;
-      }
-
-      container.innerHTML = CACHED_PICKERS.map((p) => `
-        <div class="p-3 flex justify-between items-center text-sm">
-          <div>
-            <p class="font-bold text-gray-900 uppercase">${p.name}</p>
-            <p class="text-xs text-gray-500">PIN: ${p.password || 'N/A'}${p.phone ? ' • ' + p.phone : ''}${p.email ? ' • ' + p.email : ''}</p>
-          </div>
-          <button onclick="removePicker('${p.name}')" class="bg-red-50 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
-      `).join('');
-    }
-
-    async function submitPickerForm() {
-      const name = document.getElementById('picker-form-name').value.trim();
-      const password = document.getElementById('picker-form-password').value.trim();
-      const phone = document.getElementById('picker-form-phone').value.trim();
-      const email = document.getElementById('picker-form-email').value.trim();
-
-      if (!name || !password) {
-        alert('Picker name and PIN/password are required.');
-        return;
-      }
-
-      const res = await apiPost('/api/admin/pickers', { name, password, phone, email });
-      if (res.success) {
-        document.getElementById('picker-form-name').value = '';
-        document.getElementById('picker-form-password').value = '';
-        document.getElementById('picker-form-phone').value = '';
-        document.getElementById('picker-form-email').value = '';
-        loadPickersList();
-        refreshData(false);
-      } else {
-        alert('Error: ' + (res.error || 'could not save picker.'));
-      }
-    }
-
-    async function removePicker(name) {
-      if (!confirm(`Remove picker "${name}"? This cannot be undone.`)) return;
-      const res = await fetch('/api/admin/pickers/' + encodeURIComponent(name), { method: 'DELETE' }).then(r => r.json());
-      if (res.success) {
-        loadPickersList();
-        refreshData(false);
-      } else {
-        alert('Error: ' + (res.error || 'could not remove picker.'));
-      }
-    }
-
-    // ---------- ADMIN: items management ----------
-    let CACHED_ITEMS = [];
-
-    async function loadItemsList() {
-      const container = document.getElementById('items-list-container');
-      container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">Loading items...</p>`;
-      const res = await apiGet('/api/admin/items');
-      if (!res.success) {
-        container.innerHTML = `<p class="text-sm text-red-500 p-4 text-center italic">Failed to load items.</p>`;
-        return;
-      }
-      CACHED_ITEMS = res.items || [];
-      renderItemsList();
-    }
-
-    function renderItemsList() {
-      const container = document.getElementById('items-list-container');
-      document.getElementById('items-count-badge').innerText = CACHED_ITEMS.length;
-
-      const query = document.getElementById('items-search-input').value.trim().toLowerCase();
-      let list = CACHED_ITEMS;
-      if (query) {
-        list = CACHED_ITEMS.filter((i) =>
-          i.barcode.toLowerCase().includes(query) || i.description.toLowerCase().includes(query)
-        );
-      }
-
-      if (list.length === 0) {
-        container.innerHTML = `<p class="text-sm text-gray-400 p-4 text-center italic">No items found.</p>`;
-        return;
-      }
-
-      container.innerHTML = list.map((i) => `
-        <div class="p-3 flex justify-between items-center text-sm">
-          <div>
-            <p class="font-bold text-gray-900">${i.description}</p>
-            <p class="text-xs text-gray-500 font-mono">${i.barcode}${i.sku ? ' • Code: ' + i.sku : ''}</p>
-          </div>
-          <button onclick="removeItem('${i.barcode}')" class="bg-red-50 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-100 transition shrink-0 ml-2">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-        </div>
-      `).join('');
-    }
-
-    async function submitItemForm() {
-      const barcode = document.getElementById('item-form-barcode').value.trim();
-      const sku = document.getElementById('item-form-sku').value.trim();
-      const description = document.getElementById('item-form-description').value.trim();
-
-      if (!barcode || !description) {
-        alert('Barcode and description are required.');
-        return;
-      }
-
-      const res = await apiPost('/api/admin/items', { barcode, sku, description });
-      if (res.success) {
-        document.getElementById('item-form-barcode').value = '';
-        document.getElementById('item-form-sku').value = '';
-        document.getElementById('item-form-description').value = '';
-        loadItemsList();
-        refreshData(false);
-      } else {
-        alert('Error: ' + (res.error || 'could not save item.'));
-      }
-    }
-
-    async function submitItemsImport() {
-      const text = document.getElementById('items-import-textarea').value;
-      if (!text.trim()) {
-        alert('Paste some rows first.');
-        return;
-      }
-
-      const res = await apiPost('/api/admin/items/import', { text });
-      if (res.success) {
-        document.getElementById('items-import-textarea').value = '';
-        alert(`Imported/updated ${res.imported} item(s).`);
-        loadItemsList();
-        refreshData(false);
-      } else {
-        alert('Error: ' + (res.error || 'import failed.'));
-      }
-    }
-
-    async function removeItem(barcode) {
-      if (!confirm(`Remove item with barcode "${barcode}"?`)) return;
-      const res = await fetch('/api/admin/items/' + encodeURIComponent(barcode), { method: 'DELETE' }).then(r => r.json());
-      if (res.success) {
-        loadItemsList();
-        refreshData(false);
-      } else {
-        alert('Error: ' + (res.error || 'could not remove item.'));
-      }
-    }
   </script>
 </body>
 </html>
