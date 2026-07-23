@@ -741,7 +741,11 @@
     function populateRecipients() {
       const select = document.getElementById('matrix-recipient');
       if (select) {
+        const previousValue = select.value;
         select.innerHTML = APP_RECIPIENTS.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+        if (previousValue && APP_RECIPIENTS.some(r => r.name === previousValue)) {
+          select.value = previousValue;
+        }
         updateNativeSmsLink();
       }
     }
@@ -1135,9 +1139,14 @@
               </div>
               <p class="text-gray-500 font-medium">Picker: <span class="uppercase text-gray-800">${row.picker}</span> • Time: ${row.timestamp || 'N/A'}</p>
             </div>
-            <button onclick="openPrintVoucher('${row.orderId}')" class="bg-gray-100 border border-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 hover:bg-gray-200 transition">
-              <i class="fa-solid fa-print"></i> <span>View</span>
-            </button>
+            <div class="flex items-center gap-1.5">
+              <button onclick="openPrintVoucher('${row.orderId}')" class="bg-gray-100 border border-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 hover:bg-gray-200 transition">
+                <i class="fa-solid fa-print"></i> <span>View</span>
+              </button>
+              <button onclick="removeLogEntry('${row.orderId}')" class="bg-red-50 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1204,6 +1213,16 @@
 
     function closePrintModal() {
       document.getElementById('print-modal').classList.add('hidden');
+    }
+
+    async function removeLogEntry(orderId) {
+      if (!confirm(`Remove order "${orderId}" from the logs? This cannot be undone.`)) return;
+      const res = await fetch('/api/admin/logs/' + encodeURIComponent(orderId), { method: 'DELETE' }).then(r => r.json());
+      if (res.success) {
+        refreshData(false);
+      } else {
+        alert('Error: ' + (res.error || 'could not remove log entry.'));
+      }
     }
 
     // ---------- ADMIN: sub-navigation ----------
