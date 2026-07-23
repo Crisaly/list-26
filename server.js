@@ -11,7 +11,7 @@ const app = express();
 const DB_PATH = path.join(__dirname, 'db.json');
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- tiny JSON "database" helpers ----------
